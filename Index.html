@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html lang="ms" class="h-full bg-slate-50">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bingo Nombor Arab 1–30</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Cairo & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            arabic: ['Cairo', 'sans-serif'],
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            emerald: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+              900: '#064e3b',
+            },
+            amber: {
+              400: '#fbbf24',
+              500: '#f59e0b',
+              600: '#d97706',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      user-select: none;
+    }
+    .font-arabic-num {
+      font-family: 'Cairo', sans-serif;
+    }
+    .bingo-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 0.5rem;
+    }
+    .cell-completed {
+      background-color: #059669 !important;
+      color: #ffffff !important;
+      border-color: #047857 !important;
+      transform: scale(0.98);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .line-strike {
+      animation: pulse-line 0.6s ease-in-out infinite alternate;
+    }
+    @keyframes pulse-line {
+      from { box-shadow: 0 0 5px #f59e0b; }
+      to { box-shadow: 0 0 15px #f59e0b, 0 0 25px #f59e0b; }
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="h-full bg-slate-100 text-slate-800 flex flex-col min-h-screen font-sans">
+
+  <div id="app" class="flex-1 flex flex-col max-w-5xl mx-auto w-full p-2 sm:p-4 min-h-screen">
+    
+    <!-- HEADER BAR -->
+    <header class="bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-800 text-white rounded-2xl p-4 shadow-lg mb-4 flex flex-wrap items-center justify-between gap-3 border-b-4 border-amber-400">
+      <div class="flex items-center gap-3">
+        <div class="bg-amber-400 text-emerald-950 font-black px-3 py-2 rounded-xl text-xl font-arabic shadow-sm">
+          بِينْغُو
+        </div>
+        <div>
+          <h1 class="text-xl sm:text-2xl font-black tracking-wide flex items-center gap-2">
+            Bingo Nombor Arab
+            <span class="text-xs sm:text-sm bg-emerald-900/60 text-amber-300 font-semibold px-2 py-0.5 rounded-full border border-amber-400/30">١ – ٣٠</span>
+          </h1>
+          <p class="text-xs text-emerald-100/80">Belajar & Mengenal Nombor Bahasa Arab Secara Interaktif</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <!-- Connection Status Badge -->
+        <span id="connectionBadge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-950/40 text-emerald-200 border border-emerald-500/30">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="connectionStatusText">Menyambung...</span>
+        </span>
+
+        <!-- Firebase Config Settings Button -->
+        <button onclick="openFirebaseSettingsModal()" class="p-2 rounded-xl bg-emerald-900/50 hover:bg-emerald-900/80 text-amber-300 transition-colors border border-amber-400/20" title="Tetapan Firebase / GitHub Setup">
+          <i class="fas fa-cog text-lg"></i>
+        </button>
+
+        <!-- Audio Toggle Button -->
+        <button id="btnToggleAudio" onclick="toggleAudio()" class="p-2 rounded-xl bg-emerald-900/50 hover:bg-emerald-900/80 text-amber-300 transition-colors border border-amber-400/20" title="Suara Sebutan">
+          <i class="fas fa-volume-up text-lg" id="audioIcon"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- NOTIFICATION MODAL / TOAST -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4"></div>
+
+    <!-- CONTENT VIEWS -->
+    <main class="flex-1 flex flex-col">
+      
+      <section id="viewHome" class="flex-1 flex flex-col justify-center items-center py-6">
+        <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200/80 w-full max-w-md text-center">
+          <div class="w-20 h-20 bg-emerald-100 text-emerald-700 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-inner text-3xl font-arabic font-bold">
+            ١٢٣
+          </div>
+          <h2 class="text-2xl font-bold text-slate-800 mb-1">Pilih Peranan Anda</h2>
+          <p class="text-slate-500 text-sm mb-6">Sertai permainan sebagai Pemain atau cipta bilik sebagai Games Master.</p>
+
+          <div class="space-y-4">
+            <!-- Player Option -->
+            <button onclick="showJoinGameModal()" class="w-full group p-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 flex items-center justify-between">
+              <div class="flex items-center gap-3 text-left">
+                <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">
+                  <i class="fas fa-user-ninja"></i>
+                </div>
+                <div>
+                  <div class="text-base">PESERTA / PEMAIN</div>
+                  <div class="text-xs text-emerald-100 font-normal">Sertai bilik permainan menggunakan kod</div>
+                </div>
+              </div>
+              <i class="fas fa-arrow-right text-emerald-200 group-hover:translate-x-1 transition-transform"></i>
+            </button>
+
+            <!-- Games Master Option -->
+            <button onclick="createNewGameRoom()" class="w-full group p-4 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 flex items-center justify-between border border-slate-700">
+              <div class="flex items-center gap-3 text-left">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl">
+                  <i class="fas fa-crown"></i>
+                </div>
+                <div>
+                  <div class="text-base text-amber-300">GAMES MASTER</div>
+                  <div class="text-xs text-slate-400 font-normal">Pengendali & Panggil Nombor</div>
+                </div>
+              </div>
+              <i class="fas fa-arrow-right text-slate-400 group-hover:translate-x-1 transition-transform"></i>
+            </button>
+          </div>
+
+          <!-- GitHub Info Box -->
+          <div class="mt-6 p-3 bg-slate-50 rounded-2xl border border-slate-200 text-left text-xs text-slate-600 space-y-1">
+            <div class="font-bold text-slate-800 flex items-center gap-1.5">
+              <i class="fab fa-github text-slate-700"></i> Mod GitHub Pages Aktif
+            </div>
+            <p class="text-[11px] text-slate-500">
+              Uji secara langsung dalam berbilang Tab browser (Local Multi-Tab) atau masukkan Firebase Config anda melalui ikon ⚙️ untuk sokongan multiplayer merentas peranti internet.
+            </p>
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-slate-100 text-xs text-slate-400">
+            Objektif: Mengenal, mengingat & memahami nombor 1 hingga 30 Bahasa Arab.
+          </div>
+        </div>
+      </section>
+
+      <section id="viewJoin" class="hidden flex-1 flex flex-col justify-center items-center py-6">
+        <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200/80 w-full max-w-md">
+          <button onclick="showView('viewHome')" class="text-slate-400 hover:text-slate-600 text-sm font-semibold flex items-center gap-1 mb-4">
+            <i class="fas fa-arrow-left"></i> Kembali
+          </button>
+          
+          <h2 class="text-2xl font-bold text-slate-800 mb-2">Sertai Permainan</h2>
+          <p class="text-slate-500 text-xs mb-6">Masukkan nama anda dan kod bilik yang diberikan oleh Games Master.</p>
+
+          <form onsubmit="event.preventDefault(); joinGameRoom();" class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Nama Pemain</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                  <i class="fas fa-user"></i>
+                </span>
+                <input type="text" id="inputPlayerName" required placeholder="Contoh: Ahmad" maxlength="20"
+                  class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-medium focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition-all">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Kod Permainan (Game Code)</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                  <i class="fas fa-key"></i>
+                </span>
+                <input type="text" id="inputGameCode" required placeholder="Contoh: ARAB12" uppercase maxlength="8"
+                  class="w-full pl-10 pr-4 py-3 uppercase tracking-widest font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition-all">
+              </div>
+            </div>
+
+            <button type="submit" id="btnJoinSubmit" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
+              <span>JOIN GAME</span>
+              <i class="fas fa-sign-in-alt"></i>
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <section id="viewPlayer" class="hidden flex-1 flex flex-col gap-4">
+        
+        <!-- Player Header Status Card -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div class="text-xs font-bold uppercase tracking-wider text-slate-400">Pemain</div>
+            <div id="playerDisplayName" class="text-lg font-black text-emerald-800"></div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <div class="text-center px-3 py-1 bg-slate-100 rounded-xl">
+              <div class="text-[10px] font-bold text-slate-400 uppercase">Kod Bilik</div>
+              <div id="playerRoomCode" class="text-sm font-mono font-black text-slate-700"></div>
+            </div>
+            <div class="text-center px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-xl">
+              <div class="text-[10px] font-bold text-emerald-600 uppercase">Masa</div>
+              <div id="playerTimer" class="text-sm font-mono font-black text-emerald-800">00:00</div>
+            </div>
+            <div class="text-center px-3 py-1 bg-amber-50 border border-amber-200 rounded-xl">
+              <div class="text-[10px] font-bold text-amber-600 uppercase">Baris</div>
+              <div id="playerLinesCount" class="text-sm font-black text-amber-800">0 / 5</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Setup Phase Alert / Instructions -->
+        <div id="playerSetupNotice" class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-xl shadow-sm text-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div>
+            <h3 class="font-bold text-amber-900 text-sm flex items-center gap-2">
+              <i class="fas fa-edit text-amber-600"></i> Fasa Penyediaan Kad Bingo
+            </h3>
+            <p class="text-xs text-amber-800 mt-0.5">Pilih 25 nombor Bahasa Arab daripada 1 hingga 30 untuk memenuhi kad anda.</p>
+          </div>
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <button onclick="autoFillRandomBoard()" class="flex-1 sm:flex-none px-3 py-2 bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5">
+              <i class="fas fa-random"></i> Isi Secara Rawak
+            </button>
+            <button onclick="clearBoard()" class="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-lg transition-colors">
+              Kosongkan
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Game Called Number Banner (Visible during Gameplay) -->
+        <div id="playerCallBanner" class="hidden bg-gradient-to-r from-slate-900 to-emerald-950 text-white rounded-2xl p-4 shadow-md flex items-center justify-between border border-emerald-500/30">
+          <div class="flex items-center gap-4">
+            <div class="w-14 h-14 bg-amber-400 text-slate-950 font-black font-arabic text-3xl rounded-xl flex items-center justify-center shadow-lg" id="playerLastCalledArabic">
+              --
+            </div>
+            <div>
+              <div class="text-[10px] uppercase font-bold text-amber-400 tracking-wider">Nombor Terakhir Dipanggil</div>
+              <div class="text-lg font-arabic font-bold text-emerald-200" id="playerLastCalledText">Menunggu panggilan GM...</div>
+              <div class="text-xs text-slate-300 font-mono" id="playerLastCalledDigit">Nombor: -</div>
+            </div>
+          </div>
+          <button onclick="speakCurrentNumber()" class="p-3 bg-emerald-800/80 hover:bg-emerald-700 text-amber-300 rounded-xl transition-colors border border-amber-400/20" title="Ulang Sebutan">
+            <i class="fas fa-volume-up text-lg"></i>
+          </button>
+        </div>
+
+        <!-- Main Bingo Grid Area -->
+        <div class="bg-white rounded-3xl p-4 sm:p-6 shadow-lg border border-slate-200 flex flex-col items-center">
+          
+          <div class="w-full max-w-md">
+            <!-- 5x5 Bingo Board -->
+            <div id="bingoBoardGrid" class="bingo-grid w-full aspect-square mb-4">
+              <!-- 25 Cells generated dynamically -->
+            </div>
+
+            <!-- Ready Action Button in Setup Phase -->
+            <div id="playerReadyContainer" class="space-y-2">
+              <button id="btnPlayerReady" onclick="togglePlayerReady()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2">
+                <i class="fas fa-check-circle"></i>
+                <span>SAYA SEDIA (READY)</span>
+              </button>
+              <div id="readyValidationMsg" class="text-xs text-center font-bold text-amber-600 hidden">
+                * Sila pastikan semua 25 petak diisi dengan nombor berbeza!
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- History of Called Numbers Drawer for Player -->
+        <div id="playerHistoryContainer" class="hidden bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-2">
+            <i class="fas fa-history text-emerald-600"></i> Senarai Nombor Telah Dipanggil (<span id="playerCalledCount">0</span>/30)
+          </h4>
+          <div id="playerCalledBadgeList" class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1">
+            <span class="text-xs text-slate-400 italic">Belum ada nombor dipanggil.</span>
+          </div>
+        </div>
+
+      </section>
+
+      <section id="viewGM" class="hidden flex-1 flex flex-col gap-4">
+        
+        <!-- GM Header Stats Bar -->
+        <div class="bg-slate-900 text-white rounded-2xl p-4 shadow-md flex flex-wrap items-center justify-between gap-3 border border-slate-800">
+          <div class="flex items-center gap-3">
+            <div class="bg-amber-400 text-slate-950 p-2 rounded-xl text-xl font-black">
+              <i class="fas fa-crown"></i>
+            </div>
+            <div>
+              <div class="text-[10px] uppercase font-bold text-slate-400">Papan Kawalan Games Master</div>
+              <div class="text-lg font-mono font-black text-amber-300" id="gmRoomCodeDisplay">KOD: -----</div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <div class="bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 text-center">
+              <div class="text-[10px] text-slate-400 uppercase">Pemain</div>
+              <div class="text-sm font-bold text-white"><span id="gmPlayerCount">0</span> Orang</div>
+            </div>
+            <div class="bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 text-center">
+              <div class="text-[10px] text-slate-400 uppercase">Status Sedia</div>
+              <div class="text-sm font-bold text-emerald-400" id="gmReadyCount">0 / 0</div>
+            </div>
+            <div class="bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 text-center">
+              <div class="text-[10px] text-slate-400 uppercase">Status Permainan</div>
+              <span id="gmGameStatusBadge" class="inline-block px-2 py-0.5 text-xs font-bold rounded-full bg-amber-500/20 text-amber-300">MENUNGGU</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- GM Main Stage: Current Called Number Display -->
+        <div class="bg-gradient-to-br from-emerald-900 via-emerald-800 to-slate-900 rounded-3xl p-6 shadow-xl border border-emerald-500/30 text-white flex flex-col items-center justify-center text-center relative overflow-hidden">
+          <div class="text-xs uppercase tracking-widest font-bold text-emerald-300 mb-2">Nombor Dipanggil Semasa</div>
+          
+          <!-- Huge Display -->
+          <div class="my-2 flex flex-col items-center">
+            <div id="gmLargeArabic" class="text-7xl sm:text-8xl font-black font-arabic text-amber-400 drop-shadow-md min-h-[100px] flex items-center justify-center">
+              --
+            </div>
+            <div id="gmLargeText" class="text-2xl sm:text-3xl font-arabic font-bold text-emerald-100 mt-2">
+              Tekan "Mula Permainan"
+            </div>
+            <div id="gmLargeDigit" class="text-base font-mono font-semibold text-emerald-300/80 mt-1">
+              Nombor Digit: -
+            </div>
+          </div>
+
+          <!-- GM Controls -->
+          <div class="mt-6 flex flex-wrap justify-center items-center gap-3 w-full max-w-md z-10">
+            <button id="btnGMStart" onclick="gmStartGame()" class="flex-1 py-3.5 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black rounded-2xl shadow-lg transition-all text-sm sm:text-base flex items-center justify-center gap-2">
+              <i class="fas fa-play"></i> MULA PERMAINAN
+            </button>
+
+            <button id="btnGMNext" onclick="gmCallNextNumber()" disabled class="flex-1 py-3.5 bg-amber-400 hover:bg-amber-300 disabled:opacity-40 disabled:hover:bg-amber-400 text-slate-950 font-black rounded-2xl shadow-lg transition-all text-sm sm:text-base flex items-center justify-center gap-2">
+              <i class="fas fa-forward"></i> NEXT NUMBER
+            </button>
+
+            <button id="btnGMEnd" onclick="gmEndGame()" disabled class="px-4 py-3.5 bg-rose-600 hover:bg-rose-500 disabled:opacity-40 text-white font-bold rounded-2xl shadow-md transition-all text-xs sm:text-sm">
+              END GAME
+            </button>
+          </div>
+        </div>
+
+        <!-- Called History Bar for GM -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-bold uppercase text-slate-500 tracking-wider flex items-center gap-1.5">
+              <i class="fas fa-history text-emerald-600"></i> Sejarah Panggilan (<span id="gmCalledCount">0</span>/30)
+            </h3>
+            <button onclick="speakCurrentNumber()" class="text-xs text-emerald-700 font-semibold hover:underline flex items-center gap-1">
+              <i class="fas fa-volume-up"></i> Ulang Sebutan
+            </button>
+          </div>
+          <div id="gmCalledNumbersList" class="flex flex-wrap gap-2 min-h-[42px] max-h-28 overflow-y-auto p-1 bg-slate-50 rounded-xl border border-slate-100">
+            <span class="text-xs text-slate-400 italic p-2">Nombor yang dipanggil akan tertera di sini...</span>
+          </div>
+        </div>
+
+        <!-- GM Live Players & Leaderboard Table -->
+        <div class="bg-white rounded-3xl p-4 sm:p-6 shadow-md border border-slate-200">
+          <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center justify-between">
+            <span class="flex items-center gap-2">
+              <i class="fas fa-users text-emerald-600"></i> Status & Kedudukan Pemain Live
+            </span>
+            <span class="text-xs text-slate-400 font-normal">Kemas kini masa nyata</span>
+          </h3>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  <th class="pb-3 px-2">#</th>
+                  <th class="pb-3 px-2">Pemain</th>
+                  <th class="pb-3 px-2 text-center">Status Sedia</th>
+                  <th class="pb-3 px-2 text-center">Baris Lengkap</th>
+                  <th class="pb-3 px-2 text-center">Masa</th>
+                  <th class="pb-3 px-2 text-right">Markah</th>
+                </tr>
+              </thead>
+              <tbody id="gmPlayerTableBody" class="divide-y divide-slate-100 font-medium">
+                <tr>
+                  <td colspan="6" class="py-6 text-center text-slate-400 italic">Menunggu pemain menyertai bilik...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <section id="viewResults" class="hidden flex-1 flex flex-col justify-center items-center py-6">
+        <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200/90 w-full max-w-2xl text-center">
+          
+          <div class="inline-flex items-center justify-center w-16 h-16 bg-amber-100 text-amber-600 rounded-3xl text-3xl mb-3 shadow-inner">
+            🏆
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-800">Keputusan Bingo Nombor Arab</h2>
+          <p class="text-slate-500 text-xs sm:text-sm mb-6">Tahniah kepada semua peserta yang telah mengambil bahagian!</p>
+
+          <!-- Top 3 Winners Podium -->
+          <div id="podiumContainer" class="grid grid-cols-3 gap-2 sm:gap-4 mb-6 items-end min-h-[160px]">
+            <!-- Generated dynamically -->
+          </div>
+
+          <!-- Full Final Table -->
+          <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 mb-6 max-h-60 overflow-y-auto">
+            <table class="w-full text-left text-xs sm:text-sm">
+              <thead>
+                <tr class="border-b border-slate-200 text-slate-400 uppercase text-[10px] font-bold">
+                  <th class="pb-2">Ked.</th>
+                  <th class="pb-2">Nama</th>
+                  <th class="pb-2 text-center">Baris</th>
+                  <th class="pb-2 text-center">Masa</th>
+                  <th class="pb-2 text-right">Markah</th>
+                </tr>
+              </thead>
+              <tbody id="finalLeaderboardBody" class="divide-y divide-slate-200">
+                <!-- Rows generated dynamically -->
+              </tbody>
+            </table>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-center gap-3">
+            <button onclick="showView('viewHome')" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-md transition-all text-sm">
+              <i class="fas fa-home"></i> Halaman Utama
+            </button>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+
+    <!-- NUMBER SELECTOR MODAL (Used by Player to pick numbers 1-30) -->
+    <div id="numberPickerModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+      <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 transform transition-all scale-100">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-bold text-slate-800 text-base">Pilih Nombor Arab (1 – 30)</h3>
+          <button onclick="closeNumberPicker()" class="text-slate-400 hover:text-slate-600 p-1">
+            <i class="fas fa-times text-lg"></i>
+          </button>
+        </div>
+        <p class="text-xs text-slate-500 mb-4">Pilih satu nombor untuk diletakkan pada petak <span id="targetCellIndexText" class="font-bold text-emerald-700">#</span>.</p>
+
+        <div id="numberOptionsGrid" class="grid grid-cols-5 gap-2 max-h-64 overflow-y-auto p-1">
+          <!-- 30 Number Buttons generated dynamically -->
+        </div>
+
+        <div class="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+          <button onclick="closeNumberPicker()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl">
+            Batal
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- FIREBASE SETUP SETTINGS MODAL -->
+    <div id="firebaseSettingsModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+      <div class="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-slate-200 transform transition-all">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+            <i class="fas fa-cloud-upload-alt text-emerald-600"></i> Tetapan Firebase (GitHub Pages)
+          </h3>
+          <button onclick="closeFirebaseSettingsModal()" class="text-slate-400 hover:text-slate-600 p-1">
+            <i class="fas fa-times text-lg"></i>
+          </button>
+        </div>
+
+        <p class="text-xs text-slate-600 mb-3">
+          Aplikasi ini secara automatik menyokong <strong>Mod Multi-Tab Tempatan</strong> (menguji Games Master & Peserta dalam browser yang sama).
+        </p>
+        <p class="text-xs text-slate-600 mb-4">
+          Jika anda mahu pemain menyertai dari <strong>telefon / peranti berbeza di internet</strong>, sila tampal (paste) objek Firebase JSON percuma anda di bawah:
+        </p>
+
+        <div class="space-y-3">
+          <textarea id="inputFirebaseConfigJson" rows="6" placeholder='{
+  "apiKey": "AIzaSy...",
+  "authDomain": "projek-anda.firebaseapp.com",
+  "projectId": "projek-anda",
+  "storageBucket": "projek-anda.appspot.com",
+  "messagingSenderId": "123456789",
+  "appId": "1:123456789:web:abcdef"
+}' class="w-full p-3 font-mono text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none text-slate-800"></textarea>
+
+          <div class="flex items-center gap-2 justify-end">
+            <button onclick="clearSavedFirebaseConfig()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl">
+              Padam Configuration
+            </button>
+            <button onclick="saveFirebaseConfigFromInput()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md">
+              Simpan & Sambung
+            </button>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-400">
+          * Dipercayai & selamat: Tetapan hanya disimpan secara tempatan dalam browser (localStorage) anda.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // ARABIC NUMERALS & PRONUNCIATION DATASET (1 - 30)
+    const ARABIC_DATA = {
+      1:  { arabic: '١',  text: 'وَاحِد',        latin: 'Wahid' },
+      2:  { arabic: '٢',  text: 'اِثْنَان',       latin: 'Ithnan' },
+      3:  { arabic: '٣',  text: 'ثَلَاثَة',       latin: 'Thalathah' },
+      4:  { arabic: '٤',  text: 'أَرْبَعَة',      latin: 'Arbaah' },
+      5:  { arabic: '٥',  text: 'خَمْسَة',       latin: 'Khamsah' },
+      6:  { arabic: '٦',  text: 'سِتَّة',        latin: 'Sittah' },
+      7:  { arabic: '٧',  text: 'سَبْعَة',       latin: 'Sabah' },
+      8:  { arabic: '٨',  text: 'ثَمَانِيَة',     latin: 'Thamaniyah' },
+      9:  { arabic: '٩',  text: 'تِسْعَة',       latin: 'Tisah' },
+      10: { arabic: '١٠', text: 'عَشَرَة',       latin: 'Asharah' },
+      11: { arabic: '١١', text: 'أَحَدَ عَشَرَ',    latin: 'Ahada Ashar' },
+      12: { arabic: '١٢', text: 'اثْنَا عَشَرَ',    latin: 'Ithna Ashar' },
+      13: { arabic: '١٣', text: 'ثَلَاثَةَ عَشَرَ',   latin: 'Thalathata Ashar' },
+      14: { arabic: '١٤', text: 'أَرْبَعَةَ عَشَرَ',  latin: 'Arbaata Ashar' },
+      15: { arabic: '١٥', text: 'خَمْسَةَ عَشَرَ',   latin: 'Khamsata Ashar' },
+      16: { arabic: '١٦', text: 'سِتَّةَ عَشَرَ',    latin: 'Sittata Ashar' },
+      17: { arabic: '١٧', text: 'سَبْعَةَ عَشَرَ',   latin: 'Sabata Ashar' },
+      18: { arabic: '١٨', text: 'ثَمَانِيَةَ عَشَرَ', latin: 'Thamaniyata Ashar' },
+      19: { arabic: '١٩', text: 'تِسْعَةَ عَشَرَ',   latin: 'Tisata Ashar' },
+      20: { arabic: '٢٠', text: 'عِشْرُونَ',      latin: 'Ishrun' },
+      21: { arabic: '٢١', text: 'وَاحِدٌ وَعِشْرُونَ', latin: 'Wahid wa-Ishrun' },
+      22: { arabic: '٢٢', text: 'اِثْنَانِ وَعِشْرُونَ',latin: 'Ithnan wa-Ishrun' },
+      23: { arabic: '٢٣', text: 'ثَلَاثَةٌ وَعِشْرُونَ',latin: 'Thalathah wa-Ishrun' },
+      24: { arabic: '٢٤', text: 'أَرْبَعَةٌ وَعِشْرُونَ',latin: 'Arbaah wa-Ishrun' },
+      25: { arabic: '٢٥', text: 'خَمْسَةٌ وَعِشْرُونَ',latin: 'Khamsah wa-Ishrun' },
+      26: { arabic: '٢٦', text: 'سِتَّةٌ وَعِشْرُونَ', latin: 'Sittah wa-Ishrun' },
+      27: { arabic: '٢٧', text: 'سَبْعَةٌ وَعِشْرُونَ', latin: 'Sabah wa-Ishrun' },
+      28: { arabic: '٢٨', text: 'ثَمَانِيَةٌ وَعِشْرُونَ',latin: 'Thamaniyah wa-Ishrun' },
+      29: { arabic: '٢٩', text: 'تِسْعَةٌ وَعِشْرُونَ', latin: 'Tisah wa-Ishrun' },
+      30: { arabic: '٣٠', text: 'ثَلَاثُونَ',      latin: 'Thalathun' }
+    };
+
+    // BINGO WINNING COMBINATIONS (5x5 GRID: 12 TOTAL LINES)
+    const WINNING_LINES = [
+      [0,1,2,3,4], [5,6,7,8,9], [10,11,12,13,14], [15,16,17,18,19], [20,21,22,23,24],
+      [0,5,10,15,20], [1,6,11,16,21], [2,7,12,17,22], [3,8,13,18,23], [4,9,14,19,24],
+      [0,6,12,18,24], [4,8,12,16,20]
+    ];
+
+    // APPLICATION GLOBAL STATE
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+    let isFirebaseActive = false;
+    let isAudioEnabled = true;
+    let currentRole = null; // 'GM' or 'PLAYER'
+    let currentRoomCode = null;
+    let currentPlayerDocId = null;
+    let currentPlayerName = '';
+    
+    // Player State
+    let playerBoard = Array(25).fill(null);
+    let playerMarked = Array(25).fill(false);
+    let playerIsReady = false;
+    let playerCompletedLinesCount = 0;
+    
+    // Unsubscribe handles
+    let unsubscribeRoom = null;
+    let unsubscribePlayers = null;
+    
+    // Game Room State Cache
+    let cachedRoomData = null;
+    let cachedPlayersList = [];
+    
+    // Stopwatch Timer Interval
+    let timerInterval = null;
+
+    // LOCAL BROADCAST SYNC FALLBACK ENGINE (For Local Multi-Tab testing on GitHub Pages without Firebase)
+    const localBroadcastChannel = new BroadcastChannel('bingo_arab_local_sync');
+    const localDb = {
+      rooms: {},
+      players: {}
+    };
+
+    // Helper: Local Storage Persistence for Local Sync Engine
+    function loadLocalDb() {
+      try {
+        const stored = localStorage.getItem('bingo_local_db');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          localDb.rooms = parsed.rooms || {};
+          localDb.players = parsed.players || {};
+        }
+      } catch(e) {}
+    }
+
+    function saveLocalDb() {
+      try {
+        localStorage.setItem('bingo_local_db', JSON.stringify(localDb));
+      } catch(e) {}
+    }
+
+    // Broadcast change listener
+    localBroadcastChannel.onmessage = (event) => {
+      const { type, roomCode } = event.data;
+      if (currentRoomCode && currentRoomCode === roomCode) {
+        if (!isFirebaseActive) {
+          loadLocalDb();
+          triggerLocalRoomListeners(roomCode);
+        }
+      }
+    };
+
+    function broadcastLocalChange(type, roomCode) {
+      saveLocalDb();
+      localBroadcastChannel.postMessage({ type, roomCode, timestamp: Date.now() });
+      triggerLocalRoomListeners(roomCode);
+    }
+
+    function triggerLocalRoomListeners(roomCode) {
+      if (isFirebaseActive) return;
+
+      const roomData = localDb.rooms[roomCode];
+      if (roomData) {
+        cachedRoomData = roomData;
+        if (currentRole === 'GM') updateGMDashboard(roomData);
+        else if (currentRole === 'PLAYER') updatePlayerView(roomData);
+
+        if (roomData.status === 'LIVE' && roomData.startTime) {
+          startLiveTimer(roomData.startTime);
+        } else if (roomData.status === 'FINISHED') {
+          stopLiveTimer();
+          renderFinalResults();
+        }
+      }
+
+      const roomPlayers = Object.values(localDb.players).filter(p => p.roomCode === roomCode);
+      roomPlayers.sort((a, b) => {
+        if ((b.score || 0) !== (a.score || 0)) return (b.score || 0) - (a.score || 0);
+        if (a.completionTimeMs && b.completionTimeMs) return a.completionTimeMs - b.completionTimeMs;
+        if (a.completionTimeMs) return -1;
+        if (b.completionTimeMs) return 1;
+        return (a.joinedAt || 0) - (b.joinedAt || 0);
+      });
+
+      cachedPlayersList = roomPlayers;
+      if (currentRole === 'GM') renderGMPlayerTable(roomPlayers);
+      else if (currentRole === 'PLAYER') renderPlayerRankSummary(roomPlayers);
+    }
+
+    // FIREBASE INITIALIZATION & FALLBACK CONTROLLER
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'bingo-arab-default';
+
+    async function initBackendEngine() {
+      updateConnectionStatus('Menyambung...', 'yellow');
+
+      // 1. Check custom user saved config in localStorage
+      let customConfig = null;
+      try {
+        const savedStr = localStorage.getItem('custom_firebase_config');
+        if (savedStr) customConfig = JSON.parse(savedStr);
+      } catch(e) {}
+
+      // 2. Check workspace environment config
+      const envConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+      const targetConfig = customConfig || envConfig;
+
+      if (targetConfig && targetConfig.apiKey && !targetConfig.apiKey.includes('DemoConfig')) {
+        try {
+          const app = initializeApp(targetConfig);
+          db = getFirestore(app);
+          auth = getAuth(app);
+
+          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            try {
+              const userCred = await signInWithCustomToken(auth, __initial_auth_token);
+              currentUser = userCred.user;
+            } catch(e) {
+              const userCred = await signInAnonymously(auth);
+              currentUser = userCred.user;
+            }
+          } else {
+            const userCred = await signInAnonymously(auth);
+            currentUser = userCred.user;
+          }
+
+          isFirebaseActive = true;
+          updateConnectionStatus('🟢 Firebase Cloud', 'green');
+          return;
+        } catch (err) {
+          console.warn("Firebase initialization failed, falling back to Local Engine:", err);
+        }
+      }
+
+      // Fallback to Local Multi-Tab Engine
+      isFirebaseActive = false;
+      currentUser = { uid: 'local_user_' + Math.random().toString(36).substr(2, 6) };
+      loadLocalDb();
+      updateConnectionStatus('🔵 Local Multi-Tab Sync', 'blue');
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      await initBackendEngine();
+      renderBingoBoard();
+    });
+
+    // Helper: Update Connection Status Badge
+    function updateConnectionStatus(text, color) {
+      const badge = document.getElementById('connectionBadge');
+      const label = document.getElementById('connectionStatusText');
+      if (!badge || !label) return;
+      
+      label.textContent = text;
+      if (color === 'green') {
+        badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40";
+      } else if (color === 'blue') {
+        badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-sky-950/80 text-sky-300 border border-sky-500/40";
+      } else {
+        badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-600";
+      }
+    }
+
+    // View Switcher
+    window.showView = function(viewId) {
+      ['viewHome', 'viewJoin', 'viewPlayer', 'viewGM', 'viewResults'].forEach(v => {
+        const el = document.getElementById(v);
+        if (el) el.classList.add('hidden');
+      });
+      const target = document.getElementById(viewId);
+      if (target) target.classList.remove('hidden');
+    };
+
+    window.showJoinGameModal = function() {
+      showView('viewJoin');
+    };
+
+    // Firebase Settings Modal Controller
+    window.openFirebaseSettingsModal = function() {
+      const modal = document.getElementById('firebaseSettingsModal');
+      const textarea = document.getElementById('inputFirebaseConfigJson');
+      try {
+        const existing = localStorage.getItem('custom_firebase_config');
+        if (existing) textarea.value = existing;
+      } catch(e) {}
+      modal.classList.remove('hidden');
+    };
+
+    window.closeFirebaseSettingsModal = function() {
+      document.getElementById('firebaseSettingsModal').classList.add('hidden');
+    };
+
+    window.saveFirebaseConfigFromInput = function() {
+      const val = document.getElementById('inputFirebaseConfigJson').value.trim();
+      try {
+        const parsed = JSON.parse(val);
+        if (!parsed.apiKey || !parsed.projectId) {
+          showToast("Format JSON tidak sah! Sila pastikan apiKey dan projectId wujud.", "error");
+          return;
+        }
+        localStorage.setItem('custom_firebase_config', JSON.stringify(parsed));
+        showToast("Konfigurasi Firebase disimpan! Memuat semula...", "success");
+        setTimeout(() => location.reload(), 1000);
+      } catch(e) {
+        showToast("Ralat JSON! Sila pastikan format objek JSON adalah betul.", "error");
+      }
+    };
+
+    window.clearSavedFirebaseConfig = function() {
+      localStorage.removeItem('custom_firebase_config');
+      showToast("Konfigurasi dipadam. Memuat semula ke Mod Tempatan...", "info");
+      setTimeout(() => location.reload(), 1000);
+    };
+
+    // Helper: Toast Notifications
+    window.showToast = function(msg, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      
+      let bgClass = "bg-slate-800 text-white border-slate-700";
+      if (type === 'success') bgClass = "bg-emerald-600 text-white border-emerald-500";
+      if (type === 'warning') bgClass = "bg-amber-500 text-slate-950 border-amber-400";
+      if (type === 'error') bgClass = "bg-rose-600 text-white border-rose-500";
+
+      toast.className = `p-3 sm:p-4 rounded-xl shadow-xl border text-xs sm:text-sm font-bold flex items-center justify-between transition-all transform translate-y-2 pointer-events-auto ${bgClass}`;
+      toast.innerHTML = `<span>${msg}</span><button onclick="this.parentElement.remove()" class="ml-3 opacity-70 hover:opacity-100">&times;</button>`;
+      
+      container.appendChild(toast);
+      setTimeout(() => { toast.remove(); }, 3500);
+    };
+
+    // AUDIO SYSTEM
+    window.toggleAudio = function() {
+      isAudioEnabled = !isAudioEnabled;
+      const icon = document.getElementById('audioIcon');
+      if (isAudioEnabled) {
+        icon.className = "fas fa-volume-up text-lg";
+        showToast("Suara sebutan diaktifkan", "success");
+      } else {
+        icon.className = "fas fa-volume-mute text-lg";
+        showToast("Suara sebutan dinyahaktifkan", "warning");
+      }
+    };
+
+    window.speakArabicNumber = function(num) {
+      if (!isAudioEnabled || !ARABIC_DATA[num]) return;
+      const item = ARABIC_DATA[num];
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(item.text);
+        utterance.lang = 'ar-SA';
+        utterance.rate = 0.85;
+        window.speechSynthesis.speak(utterance);
+      }
+    };
+
+    window.speakCurrentNumber = function() {
+      if (cachedRoomData && cachedRoomData.currentNumber) {
+        speakArabicNumber(cachedRoomData.currentNumber);
+      }
+    };
+
+    // CREATE GAME ROOM (GAMES MASTER)
+    window.createNewGameRoom = async function() {
+      const randomCode = 'ARAB' + Math.floor(10 + Math.random() * 90);
+      currentRoomCode = randomCode;
+      currentRole = 'GM';
+
+      const roomData = {
+        roomCode: currentRoomCode,
+        status: 'WAITING',
+        currentNumber: null,
+        calledNumbers: [],
+        startTime: null,
+        createdTime: Date.now()
+      };
+
+      if (isFirebaseActive && db) {
+        try {
+          const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingo_games', currentRoomCode);
+          await setDoc(roomRef, roomData);
+        } catch(err) {
+          showToast("Gagal mendaftar di Firebase: " + err.message, "error");
+          return;
+        }
+      } else {
+        localDb.rooms[currentRoomCode] = roomData;
+        broadcastLocalChange('CREATE_ROOM', currentRoomCode);
+      }
+
+      document.getElementById('gmRoomCodeDisplay').textContent = `KOD: ${currentRoomCode}`;
+      showView('viewGM');
+      listenToRoomData(currentRoomCode);
+      listenToPlayers(currentRoomCode);
+      showToast(`Bilik permainan ${currentRoomCode} berjaya dicipta!`, 'success');
+    };
+
+    // JOIN GAME ROOM (PLAYER)
+    window.joinGameRoom = async function() {
+      const nameInput = document.getElementById('inputPlayerName').value.trim();
+      const codeInput = document.getElementById('inputGameCode').value.trim().toUpperCase();
+
+      if (!nameInput || !codeInput) {
+        showToast("Sila masukkan nama dan kod permainan!", "warning");
+        return;
+      }
+
+      currentRoomCode = codeInput;
+      currentRole = 'PLAYER';
+      currentPlayerName = nameInput;
+      currentPlayerDocId = (currentUser ? currentUser.uid : 'usr_' + Date.now()) + '_' + currentRoomCode;
+
+      const playerData = {
+        id: currentPlayerDocId,
+        uid: currentUser ? currentUser.uid : 'anon',
+        roomCode: currentRoomCode,
+        name: currentPlayerName,
+        isReady: false,
+        board: playerBoard,
+        marked: playerMarked,
+        linesCount: 0,
+        score: 0,
+        completionTimeMs: null,
+        joinedAt: Date.now()
+      };
+
+      if (isFirebaseActive && db) {
+        try {
+          const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingo_games', codeInput);
+          const roomSnap = await getDoc(roomRef);
+          if (!roomSnap.exists()) {
+            showToast("Kod Bilik Permainan tidak wujud!", "error");
+            return;
+          }
+          if (roomSnap.data().status === 'FINISHED') {
+            showToast("Permainan telah tamat!", "warning");
+            return;
+          }
+
+          const playerRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingo_players', currentPlayerDocId);
+          await setDoc(playerRef, playerData, { merge: true });
+        } catch (err) {
+          showToast("Gagal menyertai bilik: " + err.message, "error");
+          return;
+        }
+      } else {
+        // Local Sync Engine check
+        loadLocalDb();
+        if (!localDb.rooms[codeInput]) {
+          showToast("Kod Bilik Permainan tidak ditemui!", "error");
+          return;
+        }
+        localDb.players[currentPlayerDocId] = playerData;
+        broadcastLocalChange('JOIN_ROOM', currentRoomCode);
+      }
+
+      document.getElementById('playerDisplayName').textContent = currentPlayerName;
+      document.getElementById('playerRoomCode').textContent = currentRoomCode;
+      
+      showView('viewPlayer');
+      listenToRoomData(currentRoomCode);
+      listenToPlayers(currentRoomCode);
+      renderBingoBoard();
+
+      showToast(`Berjaya menyertai bilik ${currentRoomCode}!`, 'success');
+    };
+
+    function listenToRoomData(roomCode) {
+      if (unsubscribeRoom) unsubscribeRoom();
+
+      if (isFirebaseActive && db) {
+        const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingo_games', roomCode);
+        unsubscribeRoom = onSnapshot(roomRef, (docSnap) => {
+          if (!docSnap.exists()) return;
+          const data = docSnap.data();
+          cachedRoomData = data;
+          
+          if (currentRole === 'GM') updateGMDashboard(data);
+          else if (currentRole === 'PLAYER') updatePlayerView(data);
+
+          if (data.status === 'LIVE' && data.startTime) startLiveTimer(data.startTime);
+          else if (data.status === 'FINISHED') {
+            stopLiveTimer();
+            renderFinalResults();
+          }
+        });
+      } else {
+        triggerLocalRoomListeners(roomCode);
+      }
+    }
+
+    function listenToPlayers(roomCode) {
+      if (unsubscribePlayers) unsubscribePlayers();
+
+      if (isFirebaseActive && db) {
+        const playersCol = collection(db, 'artifacts', appId, 'public', 'data', 'bingo_players');
+        unsubscribePlayers = onSnapshot(playersCol, (snapshot) => {
+          const allPlayers = [];
+          snapshot.forEach(docSnap => {
+            const p = docSnap.data();
+            if (p.roomCode === roomCode) allPlayers.push(p);
+          });
+
+          allPlayers.sort((a, b) => {
+            if ((b.score || 0) !== (a.score || 0)) return (b.score || 0) - (a.score || 0);
+            if (a.completionTimeMs && b.completionTimeMs) return a.completionTimeMs - b.completionTimeMs;
+            if (a.completionTimeMs) return -1;
+            if (b.completionTimeMs) return 1;
+            return (a.joinedAt || 0) - (b.joinedAt || 0);
+          });
+
+          cachedPlayersList = allPlayers;
+          if (currentRole === 'GM') renderGMPlayerTable(allPlayers);
+          else if (currentRole === 'PLAYER') renderPlayerRankSummary(allPlayers);
+        });
+      } else {
+        triggerLocalRoomListeners(roomCode);
+      }
+    }
+
+    // RENDER PLAYER BINGO BOARD
+    function renderBingoBoard() {
+      const grid = document.getElementById('bingoBoardGrid');
+      if (!grid) return;
+
+      grid.innerHTML = '';
+
+      for (let i = 0; i < 25; i++) {
+        const val = playerBoard[i];
+        const isMarked = playerMarked[i];
+
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = `relative rounded-2xl border-2 flex flex-col items-center justify-center p-2 transition-all transform active:scale-95 shadow-sm font-arabic font-bold min-h-[60px] ${
+          isMarked 
+            ? 'cell-completed border-emerald-700 text-white' 
+            : val 
+              ? 'bg-white border-emerald-200 text-slate-800 hover:border-emerald-400' 
+              : 'bg-slate-50 border-dashed border-slate-300 text-slate-400 hover:bg-slate-100'
+        }`;
+
+        if (val) {
+          const info = ARABIC_DATA[val];
+          cell.innerHTML = `
+            <span class="text-2xl sm:text-3xl leading-none font-arabic-num ${isMarked ? 'text-white' : 'text-emerald-900'}">${info.arabic}</span>
+            <span class="text-[10px] font-sans font-semibold mt-1 ${isMarked ? 'text-emerald-100' : 'text-slate-400'}">${val}</span>
+            ${isMarked ? '<i class="fas fa-check-circle absolute top-1 right-1 text-xs text-amber-300"></i>' : ''}
+          `;
+        } else {
+          cell.innerHTML = `<span class="text-xs font-sans text-slate-400">#${i + 1}</span>`;
+        }
+
+        cell.onclick = () => onCellClick(i);
+        grid.appendChild(cell);
+      }
+    }
+
+    // CELL CLICK HANDLER
+    async function onCellClick(index) {
+      const isLive = cachedRoomData && cachedRoomData.status === 'LIVE';
+
+      if (!isLive) {
+        if (playerIsReady) {
+          showToast("Anda telah menekan SEDIA. Tekan butang 'Tukar Kad' jika mahu mengubah.", "info");
+          return;
+        }
+        openNumberPicker(index);
+        return;
+      }
+
+      const val = playerBoard[index];
+      if (!val) return;
+
+      if (playerMarked[index]) {
+        showToast("Nombor ini telah pun ditanda!", "info");
+        return;
+      }
+
+      const called = cachedRoomData.calledNumbers || [];
+      if (!called.includes(val)) {
+        showToast(`Nombor ${val} (${ARABIC_DATA[val].arabic}) belum dipanggil oleh Games Master!`, "warning");
+        return;
+      }
+
+      playerMarked[index] = true;
+      speakArabicNumber(val);
+
+      const completedLines = calculateCompletedLines(playerBoard, playerMarked);
+      const previousLines = playerCompletedLinesCount;
+      playerCompletedLinesCount = completedLines;
+
+      const newScore = completedLines * 100;
+      let completionTime = null;
+
+      if (completedLines === 5 && previousLines < 5) {
+        showToast("🎉 TAHNIAH! BINGO 5 BARIS LENGKAP!", "success");
+        if (typeof confetti === 'function') confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        if (cachedRoomData.startTime) completionTime = Date.now() - cachedRoomData.startTime;
+      } else if (completedLines > previousLines) {
+        showToast(`✨ BINGO! ${completedLines} Baris Lengkap! (+100 Mata)`, "success");
+      }
+
+      renderBingoBoard();
+      updatePlayerHeaderStats();
+
+      // Sync player data
+      const updateObj = { marked: playerMarked, linesCount: completedLines, score: newScore };
+      if (completionTime !== null) updateObj.completionTimeMs = completionTime;
+
+      if (isFirebaseActive && db && currentPlayerDocId) {
+        const playerRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingo_players', currentPlayerDocId);
+        await updateDoc(playerRef, updateObj);
+      } else {
+        if (localDb.players[currentPlayerDocId]) {
+          Object.assign(localDb.players[currentPlayerDocId], updateObj);
+          broadcastLocalChange('UPDATE_PLAYER', currentRoomCode);
+        }
+      }
+    }
+
+    function calculateCompletedLines(board, marked) {
+      let count = 0;
+      WINNING_LINES.forEach(line => {
+        const isComplete = line.every(idx => board[idx] !== null && marked[idx] === true);
+        if (isComplete) count++;
+      });
+      return Math.min(count, 5);
+    }
+
+    let targetPickingIndex = null;
+
+    function openNumberPicker(cellIndex) {
+      targetPickingIndex = cellIndex;
+      document.getElementById('targetCellIndexText').textContent = `#${cellIndex + 1}`;
+      
+      const grid = document.getElementById('numberOptionsGrid');
+      grid.innerHTML = '';
+
+      for (let n = 1; n <= 30; n++) {
+        const isUsedInOtherCell = playerBoard.includes(n) && playerBoard[cellIndex] !== n;
+        const info = ARABIC_DATA[n];
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.disabled = isUsedInOtherCell;
+        btn.className = `p-2.5 rounded-xl border flex flex-col items-center justify-center transition-all ${
+          isUsedInOtherCell 
+            ? 'bg-slate-100 border-slate-200 text-slate-300 opacity-40 cursor-not-allowed'
+            : playerBoard[cellIndex] === n
+              ? 'bg-emerald-600 border-emerald-700 text-white shadow-md'
+              : 'bg-white border-slate-200 hover:border-emerald-500 text-slate-800'
+        }`;
+
+        btn.innerHTML = `
+          <span class="text-xl font-bold font-arabic-num">${info.arabic}</span>
+          <span class="text-[10px] font-sans font-semibold mt-0.5">${n}</span>
+        `;
+
+        btn.onclick = () => selectNumberForCell(n);
+        grid.appendChild(btn);
+      }
+
+      document.getElementById('numberPickerModal').classList.remove('hidden');
+    }
+
+    window.closeNumberPicker = function() {
+      document.getElementById('numberPickerModal').classList.add('hidden');
+      targetPickingIndex = null;
+    };
+
+    function selectNumberForCell(num) {
+      if (targetPickingIndex !== null) {
+        playerBoard[targetPickingIndex] = num;
+        renderBingoBoard();
+        closeNumberPicker();
+      }
+    }
+
+    window.autoFillRandomBoard = function() {
+      if (playerIsReady) return;
+      const nums = Array.from({ length: 30 }, (_, i) => i + 1);
+      for (let i = nums.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [nums[i], nums[j]] = [nums[j], nums[i]];
+      }
+      playerBoard = nums.slice(0, 25);
+      renderBingoBoard();
+      showToast("Kad Bingo diisi secara rawak!", "success");
+    };
+
+    window.clearBoard = function() {
+      if (playerIsReady) return;
+      playerBoard = Array(25).fill(null);
+      playerMarked = Array(25).fill(false);
+      renderBingoBoard();
+    };
+
+    window.togglePlayerReady = async function() {
+      const isFilled = playerBoard.every(v => v !== null && v >= 1 && v <= 30);
+      const uniqueCount = new Set(playerBoard).size;
+
+      if (!isFilled || uniqueCount < 25) {
+        document.getElementById('readyValidationMsg').classList.remove('hidden');
+        showToast("Sila pastikan semua 25 petak diisi dengan nombor berbeza!", "warning");
+        return;
+      }
+      document.getElementById('readyValidationMsg').classList.add('hidden');
+
+      playerIsReady = !playerIsReady;
+      const btn = document.getElementById('btnPlayerReady');
+
+      if (playerIsReady) {
+        btn.className = "w-full py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-base rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2";
+        btn.innerHTML = `<i class="fas fa-edit"></i> <span>TUKAR KAD (UBAH NOMBOR)</span>`;
+        showToast("Status anda: SEDIA (READY)", "success");
+      } else {
+        btn.className = "w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2";
+        btn.innerHTML = `<i class="fas fa-check-circle"></i> <span>SAYA SEDIA (READY)</span>`;
+      }
+
+      if (isFirebaseActive && db && currentPlayerDocId) {
+        const playerRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingo_players', currentPlayerDocId);
+        await updateDoc(playerRef, { isReady: playerIsReady, board: playerBoard });
+      } else {
+        if (localDb.players[currentPlayerDocId]) {
+          localDb.players[currentPlayerDocId].isReady = playerIsReady;
+          localDb.players[currentPlayerDocId].board = playerBoard;
+          broadcastLocalChange('UPDATE_PLAYER', currentRoomCode);
+        }
+      }
+    };
+
+    window.gmStartGame = async function() {
+      if (!currentRoomCode) return;
+
+      const updateObj = { status: 'LIVE', startTime: Date.now() };
+
+      if (isFirebaseActive && db) {
+        const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingo_games', currentRoomCode);
+        await updateDoc(roomRef, updateObj);
+      } else {
+        if (localDb.rooms[currentRoomCode]) {
+          Object.assign(localDb.rooms[currentRoomCode], updateObj);
+          broadcastLocalChange('UPDATE_ROOM', currentRoomCode);
+        }
+      }
+
+      showToast("Permainan secara rasmi bermula!", "success");
+    };
+
+    window.gmCallNextNumber = async function() {
+      if (!cachedRoomData || cachedRoomData.status !== 'LIVE') return;
+
+      const called = cachedRoomData.calledNumbers || [];
+      if (called.length >= 30) {
+        showToast("Semua 30 nombor telah dipanggil!", "info");
+        return;
+      }
+
+      const uncalled = [];
+      for (let n = 1; n <= 30; n++) {
+        if (!called.includes(n)) uncalled.push(n);
+      }
+
+      const nextNum = uncalled[Math.floor(Math.random() * uncalled.length)];
+      const newCalledList = [...called, nextNum];
+
+      const updateObj = { currentNumber: nextNum, calledNumbers: newCalledList };
+
+      if (isFirebaseActive && db) {
+        const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingo_games', currentRoomCode);
+        await updateDoc(roomRef, updateObj);
+      } else {
+        if (localDb.rooms[currentRoomCode]) {
+          Object.assign(localDb.rooms[currentRoomCode], updateObj);
+          broadcastLocalChange('UPDATE_ROOM', currentRoomCode);
+        }
+      }
+
+      speakArabicNumber(nextNum);
+    };
+
+    window.gmEndGame = async function() {
+      if (!currentRoomCode) return;
+
+      const updateObj = { status: 'FINISHED' };
+
+      if (isFirebaseActive && db) {
+        const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingo_games', currentRoomCode);
+        await updateDoc(roomRef, updateObj);
+      } else {
+        if (localDb.rooms[currentRoomCode]) {
+          Object.assign(localDb.rooms[currentRoomCode], updateObj);
+          broadcastLocalChange('UPDATE_ROOM', currentRoomCode);
+        }
+      }
+
+      showToast("Permainan telah ditamatkan.", "warning");
+    };
+
+    function updatePlayerView(roomData) {
+      const setupNotice = document.getElementById('playerSetupNotice');
+      const callBanner = document.getElementById('playerCallBanner');
+      const readyContainer = document.getElementById('playerReadyContainer');
+      const historyContainer = document.getElementById('playerHistoryContainer');
+
+      if (roomData.status === 'WAITING') {
+        setupNotice.classList.remove('hidden');
+        callBanner.classList.add('hidden');
+        readyContainer.classList.remove('hidden');
+        historyContainer.classList.add('hidden');
+      } else {
+        setupNotice.classList.add('hidden');
+        callBanner.classList.remove('hidden');
+        readyContainer.classList.add('hidden');
+        historyContainer.classList.remove('hidden');
+
+        const curNum = roomData.currentNumber;
+        if (curNum && ARABIC_DATA[curNum]) {
+          const info = ARABIC_DATA[curNum];
+          document.getElementById('playerLastCalledArabic').textContent = info.arabic;
+          document.getElementById('playerLastCalledText').textContent = info.text;
+          document.getElementById('playerLastCalledDigit').textContent = `Nombor Digit: ${curNum} (${info.latin})`;
+        }
+
+        renderCalledBadges('playerCalledBadgeList', roomData.calledNumbers || []);
+        document.getElementById('playerCalledCount').textContent = (roomData.calledNumbers || []).length;
+      }
+    }
+
+    function updatePlayerHeaderStats() {
+      document.getElementById('playerLinesCount').textContent = `${playerCompletedLinesCount} / 5`;
+    }
+
+    function renderPlayerRankSummary(playersList) {
+      if (!currentPlayerDocId) return;
+    }
+
+    function updateGMDashboard(roomData) {
+      const statusBadge = document.getElementById('gmGameStatusBadge');
+      const btnStart = document.getElementById('btnGMStart');
+      const btnNext = document.getElementById('btnGMNext');
+      const btnEnd = document.getElementById('btnGMEnd');
+
+      if (roomData.status === 'WAITING') {
+        statusBadge.textContent = "MENUNGGU";
+        statusBadge.className = "inline-block px-2 py-0.5 text-xs font-bold rounded-full bg-amber-500/20 text-amber-300";
+        btnStart.disabled = false;
+        btnNext.disabled = true;
+        btnEnd.disabled = true;
+      } else if (roomData.status === 'LIVE') {
+        statusBadge.textContent = "SEDANG BERLANGSUNG (LIVE)";
+        statusBadge.className = "inline-block px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-300 animate-pulse";
+        btnStart.disabled = true;
+        btnNext.disabled = false;
+        btnEnd.disabled = false;
+      } else {
+        statusBadge.textContent = "TAMAT";
+        statusBadge.className = "inline-block px-2 py-0.5 text-xs font-bold rounded-full bg-slate-700 text-slate-300";
+        btnStart.disabled = true;
+        btnNext.disabled = true;
+        btnEnd.disabled = true;
+      }
+
+      const curNum = roomData.currentNumber;
+      if (curNum && ARABIC_DATA[curNum]) {
+        const info = ARABIC_DATA[curNum];
+        document.getElementById('gmLargeArabic').textContent = info.arabic;
+        document.getElementById('gmLargeText').textContent = info.text;
+        document.getElementById('gmLargeDigit').textContent = `Nombor Digit: ${curNum} (${info.latin})`;
+      } else {
+        document.getElementById('gmLargeArabic').textContent = '--';
+        document.getElementById('gmLargeText').textContent = roomData.status === 'LIVE' ? 'Tekan "NEXT NUMBER"' : 'Tekan "MULA PERMAINAN"';
+        document.getElementById('gmLargeDigit').textContent = 'Nombor Digit: -';
+      }
+
+      const calledList = roomData.calledNumbers || [];
+      renderCalledBadges('gmCalledNumbersList', calledList);
+      document.getElementById('gmCalledCount').textContent = calledList.length;
+    }
+
+    function renderCalledBadges(containerId, numbersArr) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+
+      if (numbersArr.length === 0) {
+        el.innerHTML = `<span class="text-xs text-slate-400 italic p-2">Belum ada nombor dipanggil...</span>`;
+        return;
+      }
+
+      el.innerHTML = numbersArr.map(n => {
+        const info = ARABIC_DATA[n];
+        return `
+          <span class="inline-flex items-center gap-1 bg-emerald-100 border border-emerald-300 text-emerald-900 px-2.5 py-1 rounded-xl text-xs font-bold font-arabic shadow-xs">
+            <span class="text-sm">${info.arabic}</span>
+            <span class="text-[10px] font-sans text-emerald-700">(${n})</span>
+          </span>
+        `;
+      }).reverse().join('');
+    }
+
+    function renderGMPlayerTable(playersList) {
+      const tbody = document.getElementById('gmPlayerTableBody');
+      const playerCountEl = document.getElementById('gmPlayerCount');
+      const readyCountEl = document.getElementById('gmReadyCount');
+
+      if (!tbody) return;
+
+      playerCountEl.textContent = playersList.length;
+      const readyCount = playersList.filter(p => p.isReady).length;
+      readyCountEl.textContent = `${readyCount} / ${playersList.length}`;
+
+      if (playersList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-400 italic">Menunggu pemain menyertai bilik...</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = playersList.map((p, idx) => {
+        const isBingo = p.linesCount >= 5;
+        const formattedTime = p.completionTimeMs ? formatMsToMMSS(p.completionTimeMs) : '-';
+
+        return `
+          <tr class="hover:bg-slate-50 transition-colors">
+            <td class="py-3 px-2 font-bold text-slate-400">${idx + 1}</td>
+            <td class="py-3 px-2 font-bold text-slate-800 flex items-center gap-2">
+              <span>${escapeHtml(p.name)}</span>
+              ${isBingo ? '<span class="px-2 py-0.5 text-[10px] bg-amber-400 text-slate-950 font-black rounded-full">BINGO!</span>' : ''}
+            </td>
+            <td class="py-3 px-2 text-center">
+              ${p.isReady 
+                ? '<span class="inline-flex items-center text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full"><i class="fas fa-check-circle mr-1"></i> SEDIA</span>' 
+                : '<span class="inline-flex items-center text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full"><i class="fas fa-clock mr-1"></i> BELUM SEDIA</span>'}
+            </td>
+            <td class="py-3 px-2 text-center font-bold text-amber-700">${p.linesCount || 0} / 5</td>
+            <td class="py-3 px-2 text-center font-mono text-slate-600">${formattedTime}</td>
+            <td class="py-3 px-2 text-right font-black text-emerald-700">${p.score || 0}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // TIMER
+    function startLiveTimer(startTimeMs) {
+      if (timerInterval) clearInterval(timerInterval);
+
+      timerInterval = setInterval(() => {
+        const elapsedMs = Date.now() - startTimeMs;
+        const formatted = formatMsToMMSS(elapsedMs);
+
+        const playerTimer = document.getElementById('playerTimer');
+        if (playerTimer) playerTimer.textContent = formatted;
+      }, 1000);
+    }
+
+    function stopLiveTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+    }
+
+    function formatMsToMMSS(ms) {
+      const totalSeconds = Math.floor(ms / 1000);
+      const mins = Math.floor(totalSeconds / 60);
+      const secs = totalSeconds % 60;
+      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // FINAL RESULTS
+    function renderFinalResults() {
+      showView('viewResults');
+
+      const podium = document.getElementById('podiumContainer');
+      const tbody = document.getElementById('finalLeaderboardBody');
+
+      if (!podium || !tbody) return;
+
+      const list = cachedPlayersList;
+
+      const top1 = list[0];
+      const top2 = list[1];
+      const top3 = list[2];
+
+      podium.innerHTML = `
+        <div class="flex flex-col items-center">
+          ${top2 ? `
+            <div class="text-xs font-bold text-slate-600 truncate max-w-[80px]">${escapeHtml(top2.name)}</div>
+            <div class="text-[10px] text-emerald-700 font-bold">${top2.score} pts</div>
+            <div class="w-full bg-slate-200 border-t-4 border-slate-400 rounded-t-xl h-20 flex items-center justify-center text-2xl font-black text-slate-500 shadow-md">
+              🥈 2
+            </div>
+          ` : '<div class="h-20"></div>'}
+        </div>
+
+        <div class="flex flex-col items-center">
+          ${top1 ? `
+            <div class="text-sm font-black text-amber-800 truncate max-w-[100px]">${escapeHtml(top1.name)}</div>
+            <div class="text-xs text-emerald-800 font-black">${top1.score} pts</div>
+            <div class="w-full bg-amber-300 border-t-4 border-amber-500 rounded-t-xl h-28 flex items-center justify-center text-3xl font-black text-amber-900 shadow-lg">
+              🥇 1
+            </div>
+          ` : '<div class="h-28"></div>'}
+        </div>
+
+        <div class="flex flex-col items-center">
+          ${top3 ? `
+            <div class="text-xs font-bold text-amber-900 truncate max-w-[80px]">${escapeHtml(top3.name)}</div>
+            <div class="text-[10px] text-emerald-700 font-bold">${top3.score} pts</div>
+            <div class="w-full bg-amber-100 border-t-4 border-amber-400 rounded-t-xl h-16 flex items-center justify-center text-xl font-black text-amber-800 shadow-md">
+              🥉 3
+            </div>
+          ` : '<div class="h-16"></div>'}
+        </div>
+      `;
+
+      tbody.innerHTML = list.map((p, idx) => `
+        <tr class="hover:bg-slate-100 transition-colors">
+          <td class="py-2.5 font-bold text-slate-500">#${idx + 1}</td>
+          <td class="py-2.5 font-bold text-slate-800">${escapeHtml(p.name)}</td>
+          <td class="py-2.5 text-center font-bold text-amber-700">${p.linesCount || 0} / 5</td>
+          <td class="py-2.5 text-center font-mono text-slate-600">${p.completionTimeMs ? formatMsToMMSS(p.completionTimeMs) : '-'}</td>
+          <td class="py-2.5 text-right font-black text-emerald-700">${p.score || 0}</td>
+        </tr>
+      `).join('');
+
+      if (typeof confetti === 'function') confetti({ particleCount: 150, spread: 90, origin: { y: 0.5 } });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/[&<>"']/g, function(m) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+      });
+    }
+
+  </script>
+</body>
+</html>
